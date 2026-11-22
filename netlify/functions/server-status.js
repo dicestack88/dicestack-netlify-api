@@ -12,7 +12,10 @@ const EAGLER_HOSTS = new Set([
 
 const JAVA_HOSTS = new Set([
   "mc.hypixel.net", "play.wynncraft.com", "play.cubecraft.net",
-  "play.mccisland.net", "play.pvplegacy.net", "play.jartexnetwork.com"
+  "play.mccisland.net", "play.pvplegacy.net", "play.jartexnetwork.com",
+  "donutsmp.net", "minehut.com", "minemen.club", "hub.mc-complex.com",
+  "hub.manacube.net", "play.pika-network.net", "play.opblocks.com",
+  "purpleprison.net", "play.earthmc.net", "mccentral.org"
 ]);
 
 function numberAt(object, paths) {
@@ -110,8 +113,8 @@ exports.handler = async function (event) {
   // not consistently present, so use the documented parsed parameter first.
   const requested = event.queryStringParameters?.servers || "";
   const entries = requested.split(",").filter(Boolean);
-  if (!entries.length || entries.length > 30) {
-    return { statusCode: 400, headers, body: JSON.stringify({ error: "Request 1–30 known servers" }) };
+  if (!entries.length || entries.length > 50) {
+    return { statusCode: 400, headers, body: JSON.stringify({ error: "Request 1–50 known servers" }) };
   }
 
   const parsed = [];

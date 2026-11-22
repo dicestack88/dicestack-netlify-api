@@ -63,6 +63,67 @@ async function fetchJson(url) {
   }
 }
 
+async function checkEaglerWithDiagnostics(host) {
+  const url = `https://topeaglerservers.com/api/status/${encodeURIComponent(host)}`;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
+
+  try {
+    const response = await fetch(url, {
+      signal: controller.signal,
+      headers: { Accept: "application/json" }
+    });
+    const contentType = response.headers.get("content-type") || "";
+    const body = await response.text();
+    let data = null;
+    let parseError = "";
+
+    try {
+      data = JSON.parse(body);
+    } catch (error) {
+      parseError = error.message || "Response was not valid JSON";
+    }
+
+    const result = data && response.ok
+      ? normalizeEagler(data)
+      : {
+          online: false,
+          players: null,
+          max: null,
+          version: "",
+          source: "TopEaglerServers",
+          error: `Upstream returned HTTP ${response.status}`
+        };
+
+    return {
+      result,
+      diagnostic: {
+        upstreamStatus: response.status,
+        upstreamOk: response.ok,
+        contentType,
+        parseError: parseError || null,
+        bodyPreview: body.slice(0, 2000)
+      }
+    };
+  } catch (error) {
+    return {
+      result: {
+        online: false,
+        players: null,
+        max: null,
+        version: "",
+        source: "TopEaglerServers",
+        error: error.name === "AbortError" ? "Upstream timed out" : "Upstream status unavailable"
+      },
+      diagnostic: {
+        requestError: error.name === "AbortError" ? "Upstream timed out" : (error.message || "Fetch failed")
+      }
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function checkServer(edition, host) {
   const url = edition === "eagler"
     ? `https://topeaglerservers.com/api/status/${encodeURIComponent(host)}`
@@ -132,22 +193,37 @@ exports.handler = async function (event) {
     parsed.push({ edition, host });
   }
 
+  const debugEagler = event.queryStringParameters?.debug === "eagler";
   const results = {};
+  const diagnostics = {};
   let cursor = 0;
   async function worker() {
     while (cursor < parsed.length) {
       const item = parsed[cursor++];
-      results[item.host] = {
-        ...(await checkServer(item.edition, item.host)),
-        checkedAt: new Date().toISOString()
-      };
+      if (debugEagler && item.edition === "eagler") {
+        const checked = await checkEaglerWithDiagnostics(item.host);
+        results[item.host] = {
+          ...checked.result,
+          checkedAt: new Date().toISOString()
+        };
+        diagnostics[item.host] = checked.diagnostic;
+      } else {
+        results[item.host] = {
+          ...(await checkServer(item.edition, item.host)),
+          checkedAt: new Date().toISOString()
+        };
+      }
     }
   }
 
   await Promise.all(Array.from({ length: Math.min(5, parsed.length) }, worker));
+  if (debugEagler) headers["Cache-Control"] = "no-store";
+  const responseBody = { results, generatedAt: new Date().toISOString() };
+  if (debugEagler) responseBody.diagnostics = diagnostics;
+
   return {
     statusCode: 200,
     headers,
-    body: JSON.stringify({ results, generatedAt: new Date().toISOString() })
+    body: JSON.stringify(responseBody)
   };
 };

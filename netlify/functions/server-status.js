@@ -15,7 +15,10 @@ const JAVA_HOSTS = new Set([
   "play.mccisland.net", "play.pvplegacy.net", "play.jartexnetwork.com",
   "donutsmp.net", "minehut.com", "minemen.club", "hub.mc-complex.com",
   "hub.manacube.net", "play.pika-network.net", "play.opblocks.com",
-  "purpleprison.net", "play.earthmc.net", "mccentral.org"
+  "purpleprison.net", "play.earthmc.net", "mccentral.org",
+  "sm.vortexnetwork.net", "go.mineberry.org", "mbs.fadecloud.com",
+  "jms.enchantedmc.net", "mbs.wildnetwork.net", "play.freshsmp.fun",
+  "go.minepeak.org", "play.hoplite.gg"
 ]);
 
 function numberAt(object, paths) {

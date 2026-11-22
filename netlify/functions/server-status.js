@@ -28,22 +28,35 @@ function numberAt(object, paths) {
 }
 
 function normalizeEagler(data) {
-  const payload = data && data.data && typeof data.data === "object" ? data.data : data;
+  // TopEaglerServers currently wraps the actual status inside { server: ... }.
+  // Keep the older direct/data-wrapped shapes supported as fallbacks.
+  const root = data && data.data && typeof data.data === "object" ? data.data : data;
+  const payload = root && root.server && typeof root.server === "object"
+    ? root.server
+    : root;
+
   const players = numberAt(payload, [
     ["players", "online"], ["players", "current"], ["playerCount"],
     ["onlinePlayers"], ["playersOnline"]
+  ]) ?? numberAt(root, [
+    ["players", "online"], ["playerCount"], ["onlinePlayers"]
   ]) ?? numberAt(data, [["players", "online"], ["playerCount"], ["onlinePlayers"]]);
+
   const max = numberAt(payload, [
     ["players", "max"], ["maxPlayers"], ["max"]
+  ]) ?? numberAt(root, [
+    ["players", "max"], ["maxPlayers"]
   ]) ?? numberAt(data, [["players", "max"], ["maxPlayers"]]);
+
   const online = payload.online === true || payload.status === "online" ||
-    payload.isOnline === true || data.online === true || data.status === "online";
+    payload.isOnline === true || root.online === true || root.status === "online" ||
+    data.online === true || data.status === "online";
 
   return {
     online,
     players,
     max,
-    version: String(payload.version || data.version || ""),
+    version: String(payload.version || root.version || data.version || ""),
     source: "TopEaglerServers"
   };
 }

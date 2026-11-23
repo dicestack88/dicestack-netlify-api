@@ -42,8 +42,22 @@ exports.handler = async function (event) {
     if (!upstream.ok || type !== "image/gif" || (length && length > MAX_BYTES)) {
       return { statusCode: 413, headers, body: "GIF exceeds the supported size limit" };
     }
-    const bytes = Buffer.from(await upstream.arrayBuffer());
-    if (!bytes.length || bytes.length > MAX_BYTES) return { statusCode: 413, headers, body: "GIF exceeds the 3 MB limit" };
+    const reader = upstream.body?.getReader();
+    if (!reader) return { statusCode: 502, headers, body: "GIF media stream unavailable" };
+    const chunks = [];
+    let total = 0;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > MAX_BYTES) {
+        await reader.cancel();
+        return { statusCode: 413, headers, body: "GIF exceeds the 3 MB limit" };
+      }
+      chunks.push(Buffer.from(value));
+    }
+    const bytes = Buffer.concat(chunks, total);
+    if (!bytes.length) return { statusCode: 404, headers, body: "GIF media is empty" };
     return {
       statusCode: 200,
       headers: { ...headers, "Content-Type": "image/gif", "Content-Length": String(bytes.length) },

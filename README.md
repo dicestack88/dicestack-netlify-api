@@ -34,11 +34,11 @@ The existing visitor counter and ping functions remain in place.
 
 ## Dimension GIF comments
 
-- `/.netlify/functions/gif-search?q=...` — searches Tenor and returns a small result set.
-- `/.netlify/functions/gif-media?id=...` — streams the selected GIF through this site instead of asking the browser to load Tenor directly.
-- GIF media is restricted to Tenor's media hosts and capped at 3 MB per response. The Dimension database stores the provider and GIF identifier, not the media binary.
+The original Netlify GIF functions are a legacy Tenor integration. Tenor's API has been decommissioned, so these endpoints are not a working search provider and should not be configured with a new key.
 
-Set the Netlify environment variable `TENOR_API_KEY` to a Tenor API key. Without it, the endpoints return a configuration error rather than silently bypassing the proxy.
+Dimension now includes a direct-from-browser GIPHY fallback. GIPHY requires search and media requests to be made directly by the client; its content must not be proxied, cached, or stored as media by Netlify. Dimension stores only the GIPHY provider ID and retrieves its media metadata directly from GIPHY when comments load.
+
+The Netlify GIF functions remain in the repository as legacy code for reference. A future Netlify-backed provider must explicitly permit server-side API/media proxying before it is integrated, and the 3 MB streaming limit must remain in place.
 
 ## Cross-device web push
 
@@ -53,7 +53,6 @@ Set these Netlify environment variables:
 - `VAPID_PRIVATE_KEY`
 - `VAPID_SUBJECT` (for example, `mailto:admin@your-domain.example`)
 - `PUSH_WEBHOOK_SECRET` (a long random secret)
-- `TENOR_API_KEY`
 
 Generate a VAPID key pair with `npx web-push generate-vapid-keys`. Keep the private key and webhook secret in Netlify environment variables only.
 
